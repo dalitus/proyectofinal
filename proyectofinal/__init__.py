@@ -1,0 +1,4 @@
+from proyectofinal.model.users_model import Users
+from proyectofinal.model.gerente_model import Gerente
+from proyectofinal.pages.andmin_page import admin_login_page
+from proyectofinal.pages.producto_detalle_page import detalle_producto_page

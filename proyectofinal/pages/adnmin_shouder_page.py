@@ -111,9 +111,7 @@ def table_productos() -> rx.Component:
                     rx.table.cell(
                         rx.hstack(
                             rx.button("Eliminar", color_scheme="red",
-                                      on_click=lambda _, id=p.id_producto: AdminState.eliminar_producto(id)),
-                            # Aquí podrías agregar un botón para editar si lo deseas
-                            
+                                on_click=AdminState.eliminar_producto(p.id_producto)),
                         )
                     )
                     #rx.table.cell(

@@ -115,7 +115,7 @@ def table_productos() -> rx.Component:
                         )
                     )
                     #rx.table.cell(
-                        #editar_producto_dialog_component(p)
+                      
                     #)
                 )
             )

@@ -1,8 +1,8 @@
 import reflex as rx
 from typing import Optional
-from sqlmodel import Field
+from sqlmodel import SQLModel,Field
 
-class Detalles(rx.Model, table=True):
+class Detalles(SQLModel, table=True):
     __tablename__ = "detalles"
     id_detalle: Optional[int] = Field(default=None, primary_key=True)
     precio: int

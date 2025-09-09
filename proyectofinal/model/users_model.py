@@ -5,7 +5,7 @@ from sqlmodel import SQLModel, Field, Field, Relationship
 if TYPE_CHECKING:
     from proyectofinal.model.carrito_model import Carrito
 
-class Users(rx.Model, table=True):
+class Users(SQLModel, table=True):
     __tablename__ = "users"
     id_users: Optional[int] = Field(default=None, primary_key=True)
     nombre: str

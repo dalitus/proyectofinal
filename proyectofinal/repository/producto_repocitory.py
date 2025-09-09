@@ -17,7 +17,7 @@ def create_producto(producto: Producto) -> Producto:
     with get_session() as session:
         session.add(producto)
         session.commit()
-        session.refresh(producto)  # para obtener ID generado
+        session.refresh(producto)
         return producto
 
 # Actualizar producto
@@ -44,14 +44,10 @@ def delete_producto(producto_id: int) -> bool:
 
 # Búsqueda con múltiples filtros
 def buscar_productos(filtro: dict) -> list[Producto]:
-    """
-    Recibe un diccionario de filtros, ej:
-    buscar_productos({"nombre": "notebook", "marca": "dell"})
-    """
     with get_session() as session:
         query = select(Producto)
         for key, value in filtro.items():
-            if hasattr(Producto, key):
+            if key in Producto.__fields__:
                 query = query.where(getattr(Producto, key).ilike(f"%{value}%"))
         return session.exec(query).all()
 

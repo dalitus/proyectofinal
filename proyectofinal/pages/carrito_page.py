@@ -45,22 +45,21 @@ class CarritoState(rx.State):
     # Finalizar compra
     def finalizar_compra(self):
         print("Comprar ahora!")  # aquí va tu lógica de compra
-
 @rx.page(route="/carrito", title="Mi Carrito", on_load=CarritoState.cargar_carrito)
 def carrito_page() -> rx.Component:
     return rx.vstack(
-        rx.heading(" Mi Carrito"),
+        rx.heading(" Mi Carrito", size="6"),
         rx.cond(
-            CarritoState.user_id != None,
+            CarritoState.user_id is not None,
             rx.vstack(
                 rx.flex(
                     rx.foreach(
                         CarritoState.productos_carrito,
-                        lambda producto: rx.box(
+                        lambda producto: rx.card(
                             rx.vstack(
                                 rx.cond(
                                     producto["imagen"] != "",
-                                    rx.image(src=producto["imagen"], width="100px"),
+                                    rx.image(src=producto["imagen"], width="100px", border_radius="8px"),
                                     rx.box()
                                 ),
                                 rx.text(producto["nombre"], font_size="lg", font_weight="bold"),
@@ -68,16 +67,15 @@ def carrito_page() -> rx.Component:
                                 rx.text(f"Stock: {producto['stock']}", font_size="sm"),
                                 rx.button(
                                     "Eliminar",
-                                    on_click=lambda _, pid=producto["id"]: CarritoState.eliminar_producto(pid),
-                                    color_scheme="red"
+                                    on_click=CarritoState.eliminar_producto(producto["id"]),
+                                    color_scheme="red",
+                                    size="2"
                                 ),
                                 spacing="3",
                                 align="center"
                             ),
-                            padding="10px",
-                            border="1px solid #ccc",
-                            border_radius="8px",
-                            width="200px",
+                            padding="12px",
+                            width="220px",
                             text_align="center",
                             margin="10px"
                         )
@@ -85,12 +83,12 @@ def carrito_page() -> rx.Component:
                     wrap="wrap",
                     justify="center"
                 ),
-                rx.text(CarritoState.total, font_size="xl", font_weight="bold", margin_top="20px"),
-                rx.button("Finalizar Compra", on_click=CarritoState.finalizar_compra, margin_top="10px"),
+                rx.text(f"Total: ${CarritoState.total:.2f}", font_size="xl", font_weight="bold", margin_top="20px"),
+                rx.button("Finalizar Compra", on_click=CarritoState.finalizar_compra, margin_top="10px", color_scheme="green"),
                 spacing="4",
                 align_items="center"
             ),
-            rx.text("No hay usuario logueado", font_size="lg", color="red")
+            rx.text(" No hay usuario logueado", font_size="lg", color="red")
         ),
         spacing="6",
         align_items="center",

@@ -44,7 +44,7 @@ class CarritoState(rx.State):
 
     # Finalizar compra
     def finalizar_compra(self):
-        print("Comprar ahora!")  # aquí va tu lógica de compra
+        print("Comprar ahora!")  
 @rx.page(route="/carrito", title="Mi Carrito", on_load=CarritoState.cargar_carrito)
 def carrito_page() -> rx.Component:
     return rx.vstack(

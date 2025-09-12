@@ -1,29 +1,30 @@
 import reflex as rx
-from proyectofinal.repository.producto_repocitory import get_all_productos
+from proyectofinal.repository.producto_repocitory import get_producto_by_id
 
 class DetalleProductoState(rx.State):
     producto: dict = {}
 
     @rx.event
     def cargar_producto_con_id(self, producto_id: int):
-        print("→ ID recibido:", producto_id)
-        productos = get_all_productos()
-        for p in productos:
-            if p.id_producto == producto_id:
-                self.producto = {
-                    "id": p.id_producto,
-                    "nombre": p.nombre,
-                    "descripcion": p.descripcion,
-                    "precio": float(p.precio),
-                    "marca": p.marca,
-                    "categoria": p.categoria,
-                    "talle": p.talle,
-                    "imagen": p.imagen or "",
-                }
-                print("→ Producto encontrado:", self.producto)
-                break
+        producto = get_producto_by_id(producto_id)
+        if producto is None:
+            self.producto = {}
+            return
+        self.producto = {
+            "id": producto.id_producto,
+            "nombre": producto.nombre,
+            "descripcion": producto.descripcion,
+            "precio": float(producto.precio),
+            "marca": producto.marca,
+            "categoria": producto.categoria,
+            "talle": producto.talle,
+            "imagen": producto.imagen or "",
+        }
 
-            
+    @rx.event
+    def volver_al_catalogo(self):
+        return rx.redirect("/catalogo")
+    
 @rx.page(route="/detalle_producto")
 def detalle_producto_page(producto_id: int = 0) -> rx.Component:
     DetalleProductoState.cargar_producto_con_id(producto_id)
@@ -43,7 +44,7 @@ def detalle_producto_page(producto_id: int = 0) -> rx.Component:
                 rx.text(f"Talle: {DetalleProductoState.producto.get('talle', '')}", font_size="md"),
                 rx.text(f"Categoría: {DetalleProductoState.producto.get('categoria', '')}", font_size="md"),
                 rx.text(DetalleProductoState.producto.get("descripcion", ""), font_size="sm"),
-                rx.button("← Volver al Catálogo", on_click=rx.redirect("/catalogo"))
+                rx.button("← Volver al Catálogo", on_click=DetalleProductoState.volver_al_catalogo)
             ),
             padding="30px",
             box_shadow="xl",

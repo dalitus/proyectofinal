@@ -7,6 +7,7 @@ class CatalogoState(rx.State):
     buscar_texto: str = ""
     error_message: str = ""
     user_id: int = 0
+    success_message: str = ""
 
     @rx.event
     def set_user(self, user_id: int):
@@ -14,12 +15,31 @@ class CatalogoState(rx.State):
 
     @rx.event
     def agregar_carrito_con_id(self, producto_id: int):
+        if not self.user_id:
+            self.error_message = "Debes iniciar sesión para agregar al carrito."
+            self.success_message = ""
+            return
         agregar_al_carrito(self.user_id, producto_id)
+        self.success_message = "Producto agregado al carrito ✅"
+        self.error_message = ""
 
     @rx.event
     def cargar_productos(self):
-        self.productos = [p.__dict__ for p in get_all_productos()]
+        self.productos = [
+            {
+                "id_producto": p.id_producto,
+                "nombre": p.nombre,
+                "descripcion": p.descripcion,
+                "precio": float(p.precio),
+                "marca": p.marca,
+                "categoria": p.categoria,
+                "talle": p.talle,
+                "imagen": p.imagen or "",
+            }
+            for p in get_all_productos()
+        ]
         self.error_message = ""
+        self.success_message = ""
 
     @rx.event
     def actualizar_buscar_texto(self, value: str):
@@ -34,7 +54,19 @@ class CatalogoState(rx.State):
             or self.buscar_texto.lower() in str(p.precio)
         ]
         if resultados:
-            self.productos = [p.__dict__ for p in resultados]
+            self.productos = [
+                {
+                    "id_producto": p.id_producto,
+                    "nombre": p.nombre,
+                    "descripcion": p.descripcion,
+                    "precio": float(p.precio),
+                    "marca": p.marca,
+                    "categoria": p.categoria,
+                    "talle": p.talle,
+                    "imagen": p.imagen or "",
+                }
+                for p in resultados
+            ]
             self.error_message = ""
         else:
             self.productos = []
@@ -83,11 +115,11 @@ def producto_card(p: dict) -> rx.Component:
             rx.text(f"Precio: ${p.get('precio', '')}", font_size="md"),
             rx.text(f"Marca: {p.get('marca', '')}", font_size="sm"),
             rx.vstack(
-            rx.button(
-                "Agregar al Carrito",
-                on_click=CatalogoState.agregar_carrito_con_id(p["id_producto"]),
-                width="100%"
-            ),
+                rx.button(
+                    "Agregar al Carrito",
+                    on_click=CatalogoState.agregar_carrito_con_id(p["id_producto"]),
+                    width="100%"
+                ),
                 rx.button(
                     "Ver Detalle",
                     on_click=rx.redirect(f"/detalle_producto?producto_id={p['id_producto']}"),
@@ -108,7 +140,6 @@ def producto_card(p: dict) -> rx.Component:
         box_shadow="0px 2px 5px rgba(0,0,0,0.1)"
     )
 
-
 def mostrar_productos() -> rx.Component:
     return rx.hstack(
         rx.foreach(
@@ -118,9 +149,7 @@ def mostrar_productos() -> rx.Component:
         flex_wrap="wrap",
         justify_content="center"
     )
-# -------------------
-# PAGE
-# -------------------
+
 @rx.page(route="/catalogo", on_load=CatalogoState.cargar_productos)
 def catalogo_page() -> rx.Component:
     return rx.flex(
@@ -131,10 +160,12 @@ def catalogo_page() -> rx.Component:
             rx.text(CatalogoState.error_message, color="red", margin_bottom="10px"),
             rx.box()
         ),
+        rx.cond(
+            CatalogoState.success_message != "",
+            rx.text(CatalogoState.success_message, color="green", margin_bottom="10px"),
+            rx.box()
+        ),
         mostrar_productos(),
         direction="column",
         style={"width": "80vw", "margin": "auto"}
     )
-
-
-

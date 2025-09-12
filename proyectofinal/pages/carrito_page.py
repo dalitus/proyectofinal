@@ -1,50 +1,35 @@
 import reflex as rx
-from proyectofinal.service.carrito_service import obtener_productos_carrito, eliminar_producto_carrito
-
-from sqlmodel import SQLModel, Field
-from typing import Optional
-
-import reflex as rx
-from typing import Optional
+from proyectofinal.repository.carrito_repository import get_items_por_usuario
+from proyectofinal.service.catalogo_service import producto_to_dict
 
 class CarritoState(rx.State):
-    user_id: Optional[int] = None
     productos_carrito: list[dict] = []
+    user_id: int = 0
 
+    @rx.event
+    def set_user(self, user_id: int):
+        self.user_id = user_id
+
+    @rx.event
     def cargar_carrito(self):
-        if self.user_id:
-            productos = obtener_productos_carrito(self.user_id)
-            self.productos_carrito = [
-                {
-                    "id": p.id_producto,
-                    "nombre": p.nombre,
-                    "precio": p.precio,
-                    "stock": p.stock,
-                    "imagen": getattr(p, "imagen", ""),
-                }
-                for p in productos
-            ]
+        from proyectofinal.repository.carrito_repository import get_items_por_usuario
+        self.productos_carrito = get_items_por_usuario(self.user_id)
 
+    @rx.event
     def eliminar_producto(self, producto_id: int):
-        if self.user_id:
-            eliminar_producto_carrito(self.user_id, producto_id)
-            self.cargar_carrito()
+        from proyectofinal.repository.carrito_repository import eliminar_item_del_carrito, get_items_por_usuario
+        eliminar_item_del_carrito(self.user_id, producto_id)
+        self.productos_carrito = get_items_por_usuario(self.user_id)
+
+    @rx.event
+    def finalizar_compra(self):
+        self.productos_carrito = []
 
     @rx.var
-    def total(self) -> str:
-        return f"${sum(p['precio'] for p in self.productos_carrito)}"
+    def total(self) -> float:
+        return sum(p.get("precio", 0) for p in self.productos_carrito)
 
-    def finalizar_compra(self):
-        print("Comprar ahora!")
 
-    # Total dinámico
-    @rx.var
-    def total(self) -> str:
-        return f"${sum(p['precio'] for p in self.productos_carrito)}"
-
-    # Finalizar compra
-    def finalizar_compra(self):
-        print("Comprar ahora!")  
 @rx.page(route="/carrito", title="Mi Carrito", on_load=CarritoState.cargar_carrito)
 def carrito_page() -> rx.Component:
     return rx.vstack(

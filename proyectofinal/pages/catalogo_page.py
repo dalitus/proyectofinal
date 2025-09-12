@@ -1,17 +1,33 @@
 import reflex as rx
-from proyectofinal.repository.producto_repocitory import get_all_productos
+from proyectofinal.service.catalogo_service import obtener_catalogo, buscar_en_catalogo
 from proyectofinal.service.carrito_service import agregar_al_carrito
 
 class CatalogoState(rx.State):
     productos: list[dict] = []
     buscar_texto: str = ""
     error_message: str = ""
-    user_id: int = 0
     success_message: str = ""
+    user_id: int = 0
 
     @rx.event
-    def set_user(self, user_id: int):
-        self.user_id = user_id
+    def cargar_productos(self):
+        self.productos = obtener_catalogo()
+        self.error_message = ""
+        self.success_message = ""
+
+    @rx.event
+    def actualizar_buscar_texto(self, value: str):
+        self.buscar_texto = value
+
+    @rx.event
+    def buscar(self):
+        resultados = buscar_en_catalogo(self.buscar_texto)
+        if resultados:
+            self.productos = resultados
+            self.error_message = ""
+        else:
+            self.productos = []
+            self.error_message = "No se encontraron productos."
 
     @rx.event
     def agregar_carrito_con_id(self, producto_id: int):
@@ -24,53 +40,8 @@ class CatalogoState(rx.State):
         self.error_message = ""
 
     @rx.event
-    def cargar_productos(self):
-        self.productos = [
-            {
-                "id_producto": p.id_producto,
-                "nombre": p.nombre,
-                "descripcion": p.descripcion,
-                "precio": float(p.precio),
-                "marca": p.marca,
-                "categoria": p.categoria,
-                "talle": p.talle,
-                "imagen": p.imagen or "",
-            }
-            for p in get_all_productos()
-        ]
-        self.error_message = ""
-        self.success_message = ""
-
-    @rx.event
-    def actualizar_buscar_texto(self, value: str):
-        self.buscar_texto = value
-
-    @rx.event
-    def buscar(self):
-        resultados = [
-            p for p in get_all_productos()
-            if self.buscar_texto.lower() in p.nombre.lower()
-            or self.buscar_texto.lower() in p.marca.lower()
-            or self.buscar_texto.lower() in str(p.precio)
-        ]
-        if resultados:
-            self.productos = [
-                {
-                    "id_producto": p.id_producto,
-                    "nombre": p.nombre,
-                    "descripcion": p.descripcion,
-                    "precio": float(p.precio),
-                    "marca": p.marca,
-                    "categoria": p.categoria,
-                    "talle": p.talle,
-                    "imagen": p.imagen or "",
-                }
-                for p in resultados
-            ]
-            self.error_message = ""
-        else:
-            self.productos = []
-            self.error_message = "No se encontraron productos."
+    def set_user(self, user_id: int):
+        self.user_id = user_id
 
     @rx.event
     def ir_a_carrito(self):

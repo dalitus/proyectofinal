@@ -1,25 +1,12 @@
 import reflex as rx
-from proyectofinal.repository.producto_repocitory import get_producto_by_id
+from proyectofinal.service.detalle_service import obtener_detalle_producto
 
 class DetalleProductoState(rx.State):
     producto: dict = {}
 
     @rx.event
     def cargar_producto_con_id(self, producto_id: int):
-        producto = get_producto_by_id(producto_id)
-        if producto is None:
-            self.producto = {}
-            return
-        self.producto = {
-            "id": producto.id_producto,
-            "nombre": producto.nombre,
-            "descripcion": producto.descripcion,
-            "precio": float(producto.precio),
-            "marca": producto.marca,
-            "categoria": producto.categoria,
-            "talle": producto.talle,
-            "imagen": producto.imagen or "",
-        }
+        self.producto = obtener_detalle_producto(producto_id)
 
     @rx.event
     def volver_al_catalogo(self):

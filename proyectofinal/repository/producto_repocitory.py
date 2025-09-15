@@ -1,6 +1,7 @@
-from sqlmodel import select
+from sqlmodel import select, or_
 from proyectofinal.model.product_model import Producto
 from proyectofinal.repository.conect_db import get_session
+
 
 # Obtener producto por ID
 def get_producto_by_id(producto_id: int) -> Producto | None:
@@ -26,7 +27,8 @@ def update_producto(producto_id: int, data: dict) -> Producto | None:
         db_producto = session.get(Producto, producto_id)
         if db_producto:
             for key, value in data.items():
-                setattr(db_producto, key, value)
+                if hasattr(db_producto, key):
+                    setattr(db_producto, key, value)
             session.commit()
             session.refresh(db_producto)
             return db_producto
@@ -42,13 +44,18 @@ def delete_producto(producto_id: int) -> bool:
             return True
         return False
 
-# Búsqueda con múltiples filtros
-def buscar_productos(filtro: dict) -> list[Producto]:
+# Búsqueda general por texto (solo en campos de texto)
+def buscar_productos_por_texto(texto: str) -> list[Producto]:
     with get_session() as session:
-        query = select(Producto)
-        for key, value in filtro.items():
-            if key in Producto.__fields__:
-                query = query.where(getattr(Producto, key).ilike(f"%{value}%"))
+        query = select(Producto).where(
+            or_(
+                Producto.nombre.ilike(f"%{texto}%"),
+                Producto.descripcion.ilike(f"%{texto}%"),
+                Producto.marca.ilike(f"%{texto}%"),
+                Producto.categoria.ilike(f"%{texto}%"),
+                Producto.talle.ilike(f"%{texto}%")
+            )
+        )
         return session.exec(query).all()
 
 # Búsqueda por nombre
@@ -71,3 +78,5 @@ def buscar_productos_por_categoria(categoria: str) -> list[Producto]:
         return session.exec(
             select(Producto).where(Producto.categoria.ilike(f"%{categoria}%"))
         ).all()
+
+

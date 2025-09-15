@@ -1,6 +1,6 @@
 import reflex as rx
 from proyectofinal.model.product_model import Producto
-from ..service.producto_servicio import (
+from proyectofinal.service.producto_servicio import (
     obtener_productos,
     crear_producto,
     eliminar_producto,
@@ -8,14 +8,15 @@ from ..service.producto_servicio import (
 )
 
 class AdminState(rx.State):
-    productos: list[Producto] = []
+    productos: list[dict] = []
     error_message: str = ""
+    producto_id_a_eliminar: int = 0
+    producto_id_a_editar: int = 0
+    datos_edicion: dict = {}
 
-    # Cargar productos
     def cargar_productos(self):
-        self.productos = obtener_productos()
+        self.productos = [p.dict() for p in obtener_productos()]
 
-    # Crear producto
     def crear_producto(self, data: dict):
         try:
             crear_producto(
@@ -33,8 +34,13 @@ class AdminState(rx.State):
             import traceback
             traceback.print_exc()
             self.error_message = f"Error al crear producto: {e}"
-    
-    # Eliminar producto
+
+    def set_producto_a_eliminar(self, producto_id: int):
+        self.producto_id_a_eliminar = producto_id
+
+    def confirmar_eliminacion(self):
+        self.eliminar_producto(self.producto_id_a_eliminar)
+
     def eliminar_producto(self, producto_id: int):
         try:
             if eliminar_producto(producto_id):
@@ -46,8 +52,14 @@ class AdminState(rx.State):
             import traceback
             traceback.print_exc()
             self.error_message = f"Error al eliminar producto: {e}"
-    
-    # Editar producto
+
+    def set_edicion(self, producto_id: int, data: dict):
+        self.producto_id_a_editar = producto_id
+        self.datos_edicion = data
+
+    def confirmar_edicion(self):
+        self.editar_producto(self.producto_id_a_editar, self.datos_edicion)
+
     def editar_producto(self, producto_id: int, data: dict):
         try:
             if editar_producto(producto_id, data):
@@ -61,34 +73,32 @@ class AdminState(rx.State):
             self.error_message = f"Error al editar producto: {e}"
 
 
-# -------------------
-# PÁGINA DASHBOARD
-# -------------------
-@rx.page(route='admin_dashboard', title='Admin Dashboard', on_load=AdminState.cargar_productos)
+@rx.page(route="admin_dashboard", title="Admin Dashboard", on_load=AdminState.cargar_productos)
 def admin_dashboard_page() -> rx.Component:
     return rx.flex(
         rx.heading("Panel de Administración de Productos", align="center"),
         rx.button(
             "📬 Ir a consultas de usuarios",
-            on_click=lambda: rx.redirect("/consulta_admin"),
+            on_click=ir_a_consultas,
             color="blue",
             width="100%"
         ),
-
         crear_producto_dialog_component(),
         table_productos(),
         rx.cond(
             AdminState.error_message != "",
             rx.text(AdminState.error_message, color="red")
         ),
+        eliminar_producto_dialog(),
         direction="column",
         style={"width": "70vw", "margin": "auto"}
     )
 
 
-# -------------------
-# TABLA DE PRODUCTOS
-# -------------------
+def ir_a_consultas():
+    return rx.redirect("/consulta_admin")
+
+
 def table_productos() -> rx.Component:
     return rx.table.root(
         rx.table.header(
@@ -101,31 +111,43 @@ def table_productos() -> rx.Component:
             )
         ),
         rx.table.body(
-            rx.foreach(
-                AdminState.productos,
-                lambda p: rx.table.row(
-                    rx.table.cell(p.id_producto),
-                    rx.table.cell(p.nombre),
-                    rx.table.cell(f"${p.precio}"),
-                    rx.table.cell(p.marca),
-                    rx.table.cell(
-                        rx.hstack(
-                            rx.button("Eliminar", color_scheme="red",
-                                on_click=AdminState.eliminar_producto(p.id_producto)),
-                        )
-                    )
-                    #rx.table.cell(
-                        #editar_producto_dialog_component(p)
-                    #)
-                )
+            rx.foreach(AdminState.productos, render_fila_producto)
+        )
+    )
+
+
+def render_fila_producto(p: dict) -> rx.Component:
+    return rx.table.row(
+        rx.table.cell(p["id_producto"]),
+        rx.table.cell(p["nombre"]),
+        rx.table.cell(f"${p['precio']}"),
+        rx.table.cell(p["marca"]),
+        rx.table.cell(
+            rx.hstack(
+                rx.button(
+                    "Eliminar",
+                    color_scheme="red",
+                    on_click=lambda: AdminState.set_producto_a_eliminar(p["id_producto"])
+                ),
+                editar_producto_dialog_component(p)
             )
         )
     )
 
 
-# -------------------
-# MODAL CREAR PRODUCTO
-# -------------------
+def eliminar_producto_dialog() -> rx.Component:
+    return rx.alert_dialog.root(
+        rx.alert_dialog.trigger(rx.fragment()),  # invisible trigger
+        rx.alert_dialog.content(
+            rx.text("¿Eliminar producto? Esta acción no se puede deshacer."),
+            rx.hstack(
+                rx.alert_dialog.cancel(rx.button("Cancelar")),
+                rx.alert_dialog.action(rx.button("Confirmar", on_click=AdminState.confirmar_eliminacion))
+            )
+        ),
+        open=AdminState.producto_id_a_eliminar != 0
+    )
+
 def crear_producto_dialog_component() -> rx.Component:
     return rx.dialog.root(
         rx.dialog.trigger(rx.button("Crear Producto")),
@@ -163,14 +185,13 @@ def crear_producto_form() -> rx.Component:
         on_submit=AdminState.crear_producto
     )
 
-# -------------------
-# MODAL EDITAR PRODUCTO (opcional)
-def editar_producto_dialog_component(producto: Producto) -> rx.Component:
+
+def editar_producto_dialog_component(producto: dict) -> rx.Component:
     return rx.dialog.root(
         rx.dialog.trigger(rx.button("Editar")),
         rx.dialog.content(
             rx.flex(
-                rx.dialog.title(f"Editar Producto ID {producto.id_producto}"),
+                rx.dialog.title(f"Editar Producto ID {producto['id_producto']}"),
                 editar_producto_form(producto),
                 justify="center",
                 align="center",
@@ -185,27 +206,19 @@ def editar_producto_dialog_component(producto: Producto) -> rx.Component:
             style={"width": "400px"}
         )
     )
-def editar_producto_form(producto: Producto) -> rx.Component:
+
+
+def editar_producto_form(producto: dict) -> rx.Component:
     return rx.form(
         rx.vstack(
-            rx.input(placeholder="Nombre", name="nombre", value=producto.nombre),
-            rx.input(placeholder="Descripción", name="descripcion", value=producto.descripcion),
-            rx.input(placeholder="Precio", name="precio", value=str(producto.precio)),
-            rx.input(placeholder="Marca", name="marca", value=producto.marca),
-            rx.input(placeholder="Categoría", name="categoria", value=producto.categoria),
-            rx.input(placeholder="Talle", name="talle", value=producto.talle),
-            rx.input(placeholder="Imagen URL", name="imagen", value=producto.imagen),
+            rx.input(placeholder="Nombre", name="nombre", value=producto["nombre"]),
+            rx.input(placeholder="Descripción", name="descripcion", value=producto["descripcion"]),
+            rx.input(placeholder="Precio", name="precio", value=str(producto["precio"])),
+            rx.input(placeholder="Marca", name="marca", value=producto["marca"]),
+            rx.input(placeholder="Categoría", name="categoria", value=producto["categoria"]),
+            rx.input(placeholder="Talle", name="talle", value=producto["talle"]),
+            rx.input(placeholder="Imagen URL", name="imagen", value=producto["imagen"]),
             rx.dialog.close(rx.button("Guardar", type="submit"))
         ),
-        on_submit=lambda data: AdminState.editar_producto(producto.id_producto, {
-            "nombre": data["nombre"],
-            "descripcion": data["descripcion"],
-            "precio": float(data["precio"]),
-            "marca": data["marca"],
-            "categoria": data["categoria"],
-            "talle": data["talle"],
-            "imagen": data.get("imagen")
-        })
+        on_submit=lambda data: AdminState.editar_producto(producto["id_producto"], data)
     )
-
-

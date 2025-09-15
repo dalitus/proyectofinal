@@ -36,3 +36,10 @@ def validar_usuario(email: str, contrasena: str):
     with get_session() as session:
         query = select(Users).where(and_(Users.email == email, Users.contrasena == contrasena))
         return session.exec(query).one_or_none()
+    
+
+# Buscar usuario por ID
+def get_user_by_id(user_id: int):
+    with get_session() as session:
+        query = select(Users).where(Users.id_users == user_id)
+        return session.exec(query).first()

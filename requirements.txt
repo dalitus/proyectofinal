@@ -1,3 +1,4 @@
 sqlalchemy
 pymysql
 reflex==0.7.12
+cryptography

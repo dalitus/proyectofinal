@@ -14,11 +14,14 @@ class AdminState(rx.State):
     producto_id_a_editar: int = 0
     datos_edicion: dict = {}
 
+    @rx.event
     def cargar_productos(self):
         self.productos = [p.dict() for p in obtener_productos()]
 
+    @rx.event
     def crear_producto(self, data: dict):
         try:
+            print("Datos recibidos:", data)
             crear_producto(
                 nombre=data["nombre"],
                 descripcion=data["descripcion"],
@@ -35,12 +38,15 @@ class AdminState(rx.State):
             traceback.print_exc()
             self.error_message = f"Error al crear producto: {e}"
 
+    @rx.event
     def set_producto_a_eliminar(self, producto_id: int):
         self.producto_id_a_eliminar = producto_id
 
+    @rx.event
     def confirmar_eliminacion(self):
         self.eliminar_producto(self.producto_id_a_eliminar)
 
+    @rx.event
     def eliminar_producto(self, producto_id: int):
         try:
             if eliminar_producto(producto_id):
@@ -52,25 +58,38 @@ class AdminState(rx.State):
             import traceback
             traceback.print_exc()
             self.error_message = f"Error al eliminar producto: {e}"
+        finally:
+            self.producto_id_a_eliminar = 0
 
+    @rx.event
     def set_edicion(self, producto_id: int, data: dict):
         self.producto_id_a_editar = producto_id
         self.datos_edicion = data
 
+    @rx.event
     def confirmar_edicion(self):
         self.editar_producto(self.producto_id_a_editar, self.datos_edicion)
 
+    @rx.event
     def editar_producto(self, producto_id: int, data: dict):
+
         try:
-            if editar_producto(producto_id, data):
+            data = {k: v for k, v in data.items() if v.strip() != ""}
+            actualizado = editar_producto(producto_id, data)
+            if actualizado:
                 self.cargar_productos()
                 self.error_message = ""
+                self.toast("✅ Producto actualizado correctamente")
             else:
-                self.error_message = "Error al editar producto: Producto no encontrado"
+                self.error_message = "❌ Producto no encontrado"
         except Exception as e:
             import traceback
             traceback.print_exc()
-            self.error_message = f"Error al editar producto: {e}"
+            self.error_message = f"❌ Error al editar producto: {e}"
+
+    @rx.event
+    def enviar_edicion(self, producto_id: int, data: dict):
+        self.editar_producto(producto_id, data)
 
 
 @rx.page(route="admin_dashboard", title="Admin Dashboard", on_load=AdminState.cargar_productos)
@@ -78,7 +97,7 @@ def admin_dashboard_page() -> rx.Component:
     return rx.flex(
         rx.heading("Panel de Administración de Productos", align="center"),
         rx.button(
-            "📬 Ir a consultas de usuarios",
+            " Ir a consultas de usuarios",
             on_click=ir_a_consultas,
             color="blue",
             width="100%"
@@ -175,12 +194,12 @@ def crear_producto_form() -> rx.Component:
         rx.vstack(
             rx.input(placeholder="Nombre", name="nombre"),
             rx.input(placeholder="Descripción", name="descripcion"),
-            rx.input(placeholder="Precio", name="precio"),
+            rx.input(type="number", placeholder="Precio", name="precio", min="0", step="0.01"),
             rx.input(placeholder="Marca", name="marca"),
             rx.input(placeholder="Categoría", name="categoria"),
             rx.input(placeholder="Talle", name="talle"),
             rx.input(placeholder="Imagen URL", name="imagen"),
-            rx.dialog.close(rx.button("Guardar", type="submit"))
+            rx.button("Guardar", type="submit", color_scheme="blue") 
         ),
         on_submit=AdminState.crear_producto
     )
@@ -207,18 +226,17 @@ def editar_producto_dialog_component(producto: dict) -> rx.Component:
         )
     )
 
-
 def editar_producto_form(producto: dict) -> rx.Component:
     return rx.form(
         rx.vstack(
-            rx.input(placeholder="Nombre", name="nombre", value=producto["nombre"]),
-            rx.input(placeholder="Descripción", name="descripcion", value=producto["descripcion"]),
-            rx.input(placeholder="Precio", name="precio", value=str(producto["precio"])),
-            rx.input(placeholder="Marca", name="marca", value=producto["marca"]),
-            rx.input(placeholder="Categoría", name="categoria", value=producto["categoria"]),
-            rx.input(placeholder="Talle", name="talle", value=producto["talle"]),
-            rx.input(placeholder="Imagen URL", name="imagen", value=producto["imagen"]),
-            rx.dialog.close(rx.button("Guardar", type="submit"))
+            rx.input(placeholder="Nombre", name="nombre", default_value=producto.get("nombre", "")),
+            rx.input(placeholder="Descripción", name="descripcion", default_value=producto.get("descripcion", "")),
+            rx.input(type="number", placeholder="Precio", name="precio", min="0", step="0.01", default_value=str(producto.get("precio", "0.00"))),
+            rx.input(placeholder="Marca", name="marca", default_value=producto.get("marca", "")),
+            rx.input(placeholder="Categoría", name="categoria", default_value=producto.get("categoria", "")),
+            rx.input(placeholder="Talle", name="talle", default_value=producto.get("talle", "")),
+            rx.input(placeholder="Imagen URL", name="imagen", default_value=producto.get("imagen", "")),
+            rx.button("Guardar", type="submit", color_scheme="blue")
         ),
-        on_submit=lambda data: AdminState.editar_producto(producto["id_producto"], data)
+        on_submit=lambda data: AdminState.enviar_edicion(producto["id_producto"], data)
     )

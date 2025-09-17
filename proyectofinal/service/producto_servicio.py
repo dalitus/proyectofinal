@@ -1,7 +1,7 @@
 from sqlmodel import Session, select
 from proyectofinal.model.product_model import Producto
 from proyectofinal.repository import producto_repocitory
-from proyectofinal.repository.conect_db import engine
+from proyectofinal.repository.conect_db import engine, session
 
 # Obtener todos los productos
 def obtener_productos() -> list[Producto]:
@@ -29,8 +29,19 @@ def crear_producto(nombre, descripcion, precio, marca, categoria, talle, imagen)
     return producto_repocitory.create_producto(nuevo)
 
 # Editar producto existente
-def editar_producto(id_producto: int, data: dict) -> Producto | None:
-    return producto_repocitory.update_producto(id_producto, data)
+def editar_producto(producto_id: int, data: dict) -> bool:
+    producto = obtener_producto_por_id(producto_id)
+    if not producto:
+        return False
+
+    for campo, valor in data.items():
+        if hasattr(producto, campo) and valor is not None and valor != "":
+            setattr(producto, campo, valor)
+
+    session.add(producto)
+    session.commit()
+    return True
+
 
 # Eliminar producto por ID
 def eliminar_producto(id_producto: int) -> bool:

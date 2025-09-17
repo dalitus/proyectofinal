@@ -54,6 +54,10 @@ class CatalogoState(rx.State):
     @rx.event
     def ir_a_consulta(self):
         return rx.redirect("/consulta_usuario")
+    
+    @rx.event
+    def ir_a_login(self):
+        return rx.redirect("/users")
 # -------------------
 # COMPONENTES
 # -------------------
@@ -68,6 +72,7 @@ def buscar_y_botones_component() -> rx.Component:
         rx.button("Ver Carrito", on_click=CatalogoState.ir_a_carrito),
         rx.button("Ubicarme", on_click=CatalogoState.ir_a_ubicacion),
         rx.button("Hacer Consulta", on_click=CatalogoState.ir_a_consulta),
+        rx.button("logearse", on_click=CatalogoState.ir_a_login),
         spacing="3",
         justify_content="flex-start",
         margin_bottom="20px"

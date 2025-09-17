@@ -15,8 +15,8 @@ class UsersState(rx.State):
 
 app = rx.App()
  
-app.add_page(users_page, route="/", title="Usuarios")
-app.add_page(catalogo_page, route="/catalogo", title="Catálogo")
+app.add_page(users_page, route="/user", title="Usuarios")
+app.add_page(catalogo_page, route="/", title="Catálogo")
 app.add_page(admin_login_page, route="/admin_login", title="Login Admin")
 app.add_page(admin_dashboard_page, route="/admin_dashboard", title="Panel Admin")
 app.add_page(ubicaccion_page, route="/ubicacion", title="Ubicación")

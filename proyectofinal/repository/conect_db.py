@@ -6,3 +6,5 @@ engine = create_engine("mysql+pymysql://root:Dalecolon123@localhost:3306/proyect
 
 def get_session():
     return Session(engine)
+
+session = Session(engine)

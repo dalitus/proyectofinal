@@ -16,7 +16,7 @@ class Producto(SQLModel, table=True):
     marca: str
     categoria: str
     talle: str
-    imagen: Optional[str] = None
+    image_url: Optional[str] = Field(default=None, description="URL pública de la imagen en Google Drive")
     id_stock: Optional[int] = Field(default=None, foreign_key="stocks.id_stock")
 
     stock: Optional["Stocks"] = Relationship(back_populates="productos")

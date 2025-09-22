@@ -21,7 +21,12 @@ class AdminState(rx.State):
     @rx.event
     def crear_producto(self, data: dict):
         try:
-            print("Datos recibidos:", data)
+            imagen_blob = None
+            if "imagen" in data and isinstance(data["imagen"], list) and data["imagen"]:
+                ruta = data["imagen"][0]  # Ej: 'uploads/zapatilla.jpg'
+                with open(f"assets/{ruta}", "rb") as f:
+                    imagen_blob = f.read()
+
             crear_producto(
                 nombre=data["nombre"],
                 descripcion=data["descripcion"],
@@ -29,7 +34,7 @@ class AdminState(rx.State):
                 marca=data["marca"],
                 categoria=data["categoria"],
                 talle=data["talle"],
-                imagen=data.get("imagen")
+                imagen_blob=imagen_blob  # ✅ contenido binario
             )
             self.cargar_productos()
             self.error_message = ""
@@ -37,6 +42,7 @@ class AdminState(rx.State):
             import traceback
             traceback.print_exc()
             self.error_message = f"Error al crear producto: {e}"
+
 
     @rx.event
     def set_producto_a_eliminar(self, producto_id: int):
@@ -198,7 +204,13 @@ def crear_producto_form() -> rx.Component:
             rx.input(placeholder="Marca", name="marca"),
             rx.input(placeholder="Categoría", name="categoria"),
             rx.input(placeholder="Talle", name="talle"),
-            rx.input(placeholder="Imagen URL", name="imagen"),
+            rx.upload(
+                name="imagen",
+                accept="image/*",
+                max_files=1,
+                helper_text="Subí una imagen del producto",
+                style={"width": "300px"}
+            ),
             rx.button("Guardar", type="submit", color_scheme="blue") 
         ),
         on_submit=AdminState.crear_producto
@@ -235,7 +247,13 @@ def editar_producto_form(producto: dict) -> rx.Component:
             rx.input(placeholder="Marca", name="marca", default_value=producto.get("marca", "")),
             rx.input(placeholder="Categoría", name="categoria", default_value=producto.get("categoria", "")),
             rx.input(placeholder="Talle", name="talle", default_value=producto.get("talle", "")),
-            rx.input(placeholder="Imagen URL", name="imagen", default_value=producto.get("imagen", "")),
+            rx.upload(
+                name="imagen",
+                accept="image/*",
+                max_files=1,
+                helper_text="Subí una nueva imagen (opcional)",
+                style={"width": "300px"}
+            ),
             rx.button("Guardar", type="submit", color_scheme="blue")
         ),
         on_submit=lambda data: AdminState.enviar_edicion(producto["id_producto"], data)

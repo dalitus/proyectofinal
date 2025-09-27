@@ -253,7 +253,11 @@ def render_fila_producto(p: dict) -> rx.Component:
         rx.table.cell(p["nombre"]),
         rx.table.cell(
             rx.image(
-                src=p.get("imagen", ""),
+                src=rx.cond(
+                    p["imagen"] != "",
+                    p["imagen"],
+                    "/static/default.jpg"
+                ),
                 alt=p.get("nombre", ""),
                 width="56px",
                 height="56px",

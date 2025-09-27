@@ -1,36 +1,10 @@
-
 from sqlmodel import Session, select
+import os
+from typing import Optional
+from proyectofinal.service.gdrive_service import upload_image_to_drive
 from proyectofinal.model.product_model import Producto
 from proyectofinal.repository import producto_repocitory
 from proyectofinal.repository.conect_db import engine, session
-from proyectofinal.repository.producto_repocitory import create_producto
-from proyectofinal.service.google_drive_service import upload_image_to_drive
-import tempfile
-
-
-def _detect_image_kind(blob: bytes) -> str | None:
-    """Detecta tipo de imagen por los bytes iniciales (magic bytes).
-
-    Devuelve 'jpeg', 'png', 'gif', 'webp', 'bmp' o None si no parece imagen.
-    """
-    if not blob or len(blob) < 4:
-        return None
-    # JPEG
-    if blob[0:2] == b"\xff\xd8":
-        return "jpeg"
-    # PNG
-    if blob[0:8] == b"\x89PNG\r\n\x1a\n":
-        return "png"
-    # GIF (GIF87a or GIF89a)
-    if blob[0:6] in (b"GIF87a", b"GIF89a"):
-        return "gif"
-    # WEBP (RIFF....WEBP)
-    if blob[0:4] == b"RIFF" and blob[8:12] == b"WEBP":
-        return "webp"
-    # BMP
-    if blob[0:2] == b"BM":
-        return "bmp"
-    return None
 
 # Obtener todos los productos
 def obtener_productos() -> list[Producto]:
@@ -42,22 +16,29 @@ def obtener_productos() -> list[Producto]:
 def obtener_producto_por_id(id_producto: int) -> Producto | None:
     return producto_repocitory.get_producto_by_id(id_producto)
 
-
-def crear_producto(nombre, descripcion, precio, marca, categoria, talle, imagen_bytes: bytes, imagen_filename: str = None) -> Producto:
+# Crear nuevo producto con validación mínima
+def crear_producto(nombre, descripcion, precio, marca, categoria, talle, imagen) -> Producto:
     if not nombre or precio is None:
         raise ValueError("Nombre y precio son obligatorios.")
-    image_url = None
-    if imagen_bytes:
-        # Guardar temporalmente la imagen para subirla a Drive
-        with tempfile.NamedTemporaryFile(delete=False, suffix=imagen_filename or ".jpg") as tmp:
-            tmp.write(imagen_bytes)
-            tmp.flush()
-            image_url = upload_image_to_drive(tmp.name, imagen_filename)
-        # Eliminar archivo temporal
-        try:
-            os.remove(tmp.name)
-        except Exception:
-            pass
+
+    imagen_url: Optional[str] = None
+    # Si 'imagen' parece ruta de archivo local, subirla a Drive.
+    try:
+        print(f"[PRODUCTO] crear_producto: imagen entrada={imagen}")
+        if imagen and os.path.isfile(imagen):
+            folder_id = os.getenv("GDRIVE_FOLDER_ID")
+            print(f"[PRODUCTO] Subiendo imagen local a Drive. folder_id={folder_id}")
+            imagen_url = upload_image_to_drive(imagen, folder_id=folder_id, producto_nombre=nombre)
+            print(f"[PRODUCTO] URL recibida de Drive: {imagen_url}")
+        else:
+            # Si no es archivo local, asumimos que ya es una URL
+            imagen_url = imagen
+    except Exception as e:
+        import traceback
+        print(f"[PRODUCTO] Error subiendo imagen: {e}")
+        traceback.print_exc()
+        # Si la imagen no es URL válida, evitar guardar la ruta local
+        imagen_url = imagen if (isinstance(imagen, str) and imagen.startswith("http")) else ""
     nuevo = Producto(
         nombre=nombre,
         descripcion=descripcion,
@@ -65,10 +46,9 @@ def crear_producto(nombre, descripcion, precio, marca, categoria, talle, imagen_
         marca=marca,
         categoria=categoria,
         talle=talle,
-        image_url=image_url
+        imagen=imagen_url
     )
-    return create_producto(nuevo)
-
+    return producto_repocitory.create_producto(nuevo)
 
 # Editar producto existente
 def editar_producto(producto_id: int, data: dict) -> bool:
@@ -78,6 +58,16 @@ def editar_producto(producto_id: int, data: dict) -> bool:
 
     for campo, valor in data.items():
         if hasattr(producto, campo) and valor is not None and valor != "":
+            if campo == "imagen":
+                try:
+                    print(f"[PRODUCTO] editar_producto: campo imagen valor={valor}")
+                    if valor and os.path.isfile(valor):
+                        folder_id = os.getenv("GDRIVE_FOLDER_ID")
+                        print(f"[PRODUCTO] Subiendo imagen local a Drive. folder_id={folder_id}")
+                        valor = upload_image_to_drive(valor, folder_id=folder_id, producto_nombre=producto.nombre)
+                        print(f"[PRODUCTO] URL recibida de Drive: {valor}")
+                except Exception:
+                    print("[PRODUCTO] Error subiendo imagen, se mantiene valor.")
             setattr(producto, campo, valor)
 
     session.add(producto)
@@ -96,4 +86,3 @@ def buscar_productos(nombre: str) -> list[Producto]:
 # Búsqueda general por texto (nombre, marca, categoría, etc.)
 def buscar_productos_por_texto(texto: str) -> list[Producto]:
     return producto_repocitory.buscar_productos_por_texto(texto)
-

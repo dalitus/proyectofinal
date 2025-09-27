@@ -4,3 +4,6 @@ assets/external/
 __pycache__/
 *.py[cod]
 *.db
+credentials.json
+.env
+

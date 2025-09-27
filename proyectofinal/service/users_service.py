@@ -18,7 +18,7 @@ def select_by_email_service(email: str):
         return select_all()
 
 
-def create_user_service(nombre: str, apellido: str, contrasena: str, email: str, telefono: str):
+def create_user_service(nombre: str, apellido: str, contrasena: str, email: str, telefono: str, es_admin: bool = False):
     user = select_by_email(email)
     if len(user) == 0:
         user_save = Users(
@@ -26,7 +26,8 @@ def create_user_service(nombre: str, apellido: str, contrasena: str, email: str,
             apellido=apellido,
             contrasena=contrasena,
             email=email,
-            telefono=telefono
+            telefono=telefono,
+            es_admin=es_admin,
         )
         return create_user(user_save)
     else:
@@ -57,3 +58,19 @@ def cerrar_sesion_service():
     """Cierra la sesión del usuario actual"""
     global _usuario_logueado
     _usuario_logueado = None
+
+
+def crear_admin_inicial(nombre: str, apellido: str, contrasena: str, email: str, telefono: str):
+    existente = select_by_email(email)
+    if len(existente) == 0:
+        return create_user_service(nombre, apellido, contrasena, email, telefono, es_admin=True)
+    # Si ya existe, asegura flag admin
+    user = existente[0]
+    if not user.es_admin:
+        user.es_admin = True
+        from proyectofinal.repository.conect_db import get_session
+        with get_session() as s:
+            s.add(user)
+            s.commit()
+            s.refresh(user)
+    return user

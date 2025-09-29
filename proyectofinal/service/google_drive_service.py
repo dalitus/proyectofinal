@@ -29,5 +29,5 @@ def upload_image_to_drive(filepath, filename=None):
     # Make file public
     service.permissions().create(fileId=file.get('id'), body={'role': 'reader', 'type': 'anyone'}).execute()
     # Get public URL
-    url = f"https://drive.google.com/uc?id={file.get('id')}&export=download"
+    url = f"https://drive.google.com/uc?export=view&id={file.get('id')}"
     return url

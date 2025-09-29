@@ -81,11 +81,28 @@ def buscar_y_botones_component() -> rx.Component:
 def producto_card(p: dict) -> rx.Component:
     return rx.box(
         rx.vstack(
-            rx.image(
-                src=p.get("imagen", ""),
-                alt=p.get("nombre", ""),
-                width="150px",
-                height="150px"
+            rx.cond(
+                p.get("imagen", "") != "",
+                rx.image(
+                    src=p["imagen"],
+                    alt=p.get("nombre", ""),
+                    width="150px",
+                    height="150px",
+                    border_radius="8px",
+                    object_fit="cover",
+                    style={
+                        "transition": "transform 0.2s",
+                        "_hover": {"transform": "scale(1.2)", "z_index": "10"}
+                    }
+                ),
+                rx.image(
+                    src="/static/default.jpg",
+                    alt="Imagen no disponible",
+                    width="150px",
+                    height="150px",
+                    border_radius="8px",
+                    object_fit="cover"
+                )
             ),
             rx.text(p.get("nombre", ""), font_size="lg", font_weight="bold"),
             rx.text(f"Precio: ${p.get('precio', '')}", font_size="md"),

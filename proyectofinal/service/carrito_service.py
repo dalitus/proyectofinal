@@ -1,21 +1,18 @@
-from proyectofinal.repository.carrito_repository import agregar_item_al_carrito
-from proyectofinal.repository.users_repository import get_user_by_id
-from proyectofinal.repository.producto_repocitory import get_producto_by_id
+from proyectofinal.repository.carrito_repository import (
+    get_items_por_usuario,
+    agregar_item_al_carrito,
+    eliminar_item_del_carrito,
+    vaciar_carrito
+)
 
-def agregar_al_carrito(user_id: int, producto_id: int) -> dict:
-    usuario = get_user_by_id(user_id)
-    producto = get_producto_by_id(producto_id)
+def cargar_carrito_service(id_users: int) -> list[dict]:
+    return get_items_por_usuario(id_users)
 
-    if not usuario:
-        return {"status": "error", "mensaje": "Usuario no encontrado"}
+def agregar_producto_service(id_users: int, id_producto: int) -> None:
+    agregar_item_al_carrito(id_users, id_producto)
 
-    if not producto:
-        return {"status": "error", "mensaje": "Producto no encontrado"}
+def eliminar_producto_service(id_users: int, id_producto: int) -> None:
+    eliminar_item_del_carrito(id_users, id_producto)
 
-    try:
-        agregar_item_al_carrito(user_id, producto_id)
-        return {"status": "ok", "mensaje": "Producto agregado al carrito"}
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return {"status": "error", "mensaje": f"Error al agregar al carrito: {e}"}
+def finalizar_compra_service(id_users: int) -> None:
+    vaciar_carrito(id_users)

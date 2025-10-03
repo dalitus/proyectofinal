@@ -1,81 +1,96 @@
 import reflex as rx
-from proyectofinal.repository.carrito_repository import get_items_por_usuario
-from proyectofinal.service.catalogo_service import producto_to_dict
+from proyectofinal.service.carrito_service import (
+    cargar_carrito_service,
+    eliminar_producto_service,
+    finalizar_compra_service
+)
 
 class CarritoState(rx.State):
     productos_carrito: list[dict] = []
     user_id: int = 0
 
     @rx.event
-    def set_user(self, user_id: int):
-        self.user_id = user_id
+    def set_user(self, value: str):
+        self.user_id = int(value) if value.isdigit() else 0
+        self.cargar_carrito()
 
     @rx.event
     def cargar_carrito(self):
-        from proyectofinal.repository.carrito_repository import get_items_por_usuario
-        self.productos_carrito = get_items_por_usuario(self.user_id)
+        self.productos_carrito = cargar_carrito_service(self.user_id)
 
     @rx.event
     def eliminar_producto(self, producto_id: int):
-        from proyectofinal.repository.carrito_repository import eliminar_item_del_carrito, get_items_por_usuario
-        eliminar_item_del_carrito(self.user_id, producto_id)
-        self.productos_carrito = get_items_por_usuario(self.user_id)
+        eliminar_producto_service(self.user_id, producto_id)
+        self.productos_carrito = cargar_carrito_service(self.user_id)
 
     @rx.event
     def finalizar_compra(self):
+        finalizar_compra_service(self.user_id)
         self.productos_carrito = []
 
     @rx.var
     def total(self) -> float:
         return sum(p.get("precio", 0) for p in self.productos_carrito)
 
+def producto_card(p: dict) -> rx.Component:
+    return rx.card(
+        rx.vstack(
+            rx.image(
+                src=p.get("imagen", "/static/default.jpg"),
+                alt=p.get("nombre", ""),
+                width="150px",
+                height="150px",
+                border_radius="8px",
+                object_fit="cover"
+            ),
+            rx.text(p.get("nombre", ""), font_size="lg", font_weight="bold"),
+            rx.text(f"Precio: ${p.get('precio', '')}", font_size="md"),
+            rx.button(
+                "Eliminar",
+                on_click=lambda: CarritoState.eliminar_producto(p["id_producto"]),
+                color_scheme="red"
+            )
+        ),
+        padding="10px",
+        width="220px",
+        margin="10px"
+    )
 
-@rx.page(route="/carrito", title="Mi Carrito", on_load=CarritoState.cargar_carrito)
+@rx.page(route="/carrito", title="Carrito")
 def carrito_page() -> rx.Component:
-    return rx.vstack(
-        rx.heading(" Mi Carrito", size="6"),
-        rx.cond(
-            CarritoState.user_id is not None,
-            rx.vstack(
+    return rx.flex(
+        rx.vstack(
+            rx.script("""
+                window.addEventListener('load', () => {
+                    const id = localStorage.getItem('user_id');
+                    if (id) {
+                        fetch('/_api/set_user', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ value: id })
+                        });
+                    }
+                });
+            """),
+            rx.heading("Tu Carrito", size="6"),
+            rx.cond(
+                CarritoState.productos_carrito.length() == 0,
+                rx.text("No hay productos en tu carrito."),
                 rx.flex(
-                    rx.foreach(
-                        CarritoState.productos_carrito,
-                        lambda producto: rx.card(
-                            rx.vstack(
-                                rx.cond(
-                                    producto["imagen"] != "",
-                                    rx.image(src=producto["imagen"], width="100px", border_radius="8px"),
-                                    rx.box()
-                                ),
-                                rx.text(producto["nombre"], font_size="lg", font_weight="bold"),
-                                rx.text(f"Precio: ${producto['precio']}", font_size="md"),
-                                rx.text(f"Stock: {producto['stock']}", font_size="sm"),
-                                rx.button(
-                                    "Eliminar",
-                                    on_click=CarritoState.eliminar_producto(producto["id"]),
-                                    color_scheme="red",
-                                    size="2"
-                                ),
-                                spacing="3",
-                                align="center"
-                            ),
-                            padding="12px",
-                            width="220px",
-                            text_align="center",
-                            margin="10px"
-                        )
-                    ),
+                    rx.foreach(CarritoState.productos_carrito, producto_card),
                     wrap="wrap",
                     justify="center"
-                ),
-                rx.text(f"Total: ${CarritoState.total:.2f}", font_size="xl", font_weight="bold", margin_top="20px"),
-                rx.button("Finalizar Compra", on_click=CarritoState.finalizar_compra, margin_top="10px", color_scheme="green"),
-                spacing="4",
-                align_items="center"
+                )
             ),
-            rx.text(" No hay usuario logueado", font_size="lg", color="red")
-        ),
-        spacing="6",
-        align_items="center",
-        padding="20px"
+            rx.text(f"Total: ${CarritoState.total}", font_size="xl", margin_top="20px"),
+            rx.button(
+                "Finalizar Compra",
+                on_click=CarritoState.finalizar_compra,
+                color_scheme="green",
+                margin_top="10px"
+            ),
+            spacing="4",
+            align_items="center",
+            padding="20px"
+        )
     )

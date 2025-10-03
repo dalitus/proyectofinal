@@ -1,26 +1,34 @@
+from sqlmodel import Session, select
 from proyectofinal.model.carrito_model import Carrito
-from proyectofinal.repository.conect_db import get_session
-from sqlmodel import select
+from proyectofinal.repository.conect_db import engine
 
-# ✅ Agregar un producto al carrito
-def agregar_item_al_carrito(user_id: int, producto_id: int):
-    nuevo_item = Carrito(id_users=user_id, id_producto=producto_id)
-    with get_session() as session:
+def get_items_por_usuario(id_users: int) -> list[dict]:
+    with Session(engine) as session:
+        query = select(Carrito).where(Carrito.id_users == id_users)
+        resultados = session.exec(query).all()
+        return [carrito.producto.dict() for carrito in resultados if carrito.producto]
+
+def agregar_item_al_carrito(id_users: int, id_producto: int) -> None:
+    with Session(engine) as session:
+        nuevo_item = Carrito(id_users=id_users, id_producto=id_producto)
         session.add(nuevo_item)
         session.commit()
 
-# ✅ Obtener todos los ítems del carrito de un usuario
-def get_items_por_usuario(user_id: int) -> list[Carrito]:
-    with get_session() as session:
-        query = select(Carrito).where(Carrito.id_users == user_id)
-        return session.exec(query).all()
-
-# ✅ Eliminar un ítem del carrito por ID
-def eliminar_item_del_carrito(id_carrito: int) -> bool:
-    with get_session() as session:
-        item = session.get(Carrito, id_carrito)
+def eliminar_item_del_carrito(id_users: int, id_producto: int) -> None:
+    with Session(engine) as session:
+        query = select(Carrito).where(
+            Carrito.id_users == id_users,
+            Carrito.id_producto == id_producto
+        )
+        item = session.exec(query).first()
         if item:
             session.delete(item)
             session.commit()
-            return True
-        return False
+
+def vaciar_carrito(id_users: int) -> None:
+    with Session(engine) as session:
+        query = select(Carrito).where(Carrito.id_users == id_users)
+        items = session.exec(query).all()
+        for item in items:
+            session.delete(item)
+        session.commit()

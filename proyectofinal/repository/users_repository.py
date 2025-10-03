@@ -3,6 +3,10 @@ from proyectofinal.repository.conect_db import get_session
 from sqlmodel import select
 from sqlalchemy import and_
 
+
+from proyectofinal.model.users_model import Users
+from proyectofinal.repository.conect_db import session
+
 # Obtener todos los usuarios
 def select_all():
     with get_session() as session:
@@ -43,3 +47,6 @@ def get_user_by_id(user_id: int):
     with get_session() as session:
         query = select(Users).where(Users.id_users == user_id)
         return session.exec(query).first()
+
+
+

@@ -1,5 +1,6 @@
-from proyectofinal.repository.detalle_repository import get_producto_por_id
+import reflex as rx
 from proyectofinal.model.product_model import Producto
+from proyectofinal.repository.producto_repocitory import get_producto_by_id
 
 def producto_to_dict(p: Producto) -> dict:
     return {
@@ -13,8 +14,15 @@ def producto_to_dict(p: Producto) -> dict:
         "imagen": p.imagen or "",
     }
 
+
 def obtener_detalle_producto(producto_id: int) -> dict:
-    producto = get_producto_por_id(producto_id)
-    if producto is None:
+    try:
+        producto = get_producto_by_id(producto_id)
+        if producto:
+            return producto_to_dict(producto)
+        else:
+            print(f"[ERROR] obtener_detalle_producto: Producto con ID {producto_id} no encontrado.")
+            return {}
+    except Exception as e:
+        print(f"[ERROR] obtener_detalle_producto: {e}")
         return {}
-    return producto_to_dict(producto)

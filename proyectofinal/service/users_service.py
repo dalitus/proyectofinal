@@ -1,6 +1,7 @@
 from ..repository.users_repository import select_all, select_by_email, create_user, delete_user_by_email, validar_usuario
 from ..model.users_model import Users
 
+from proyectofinal.repository.users_repository import get_user_by_id
 
 _usuario_logueado: Users | None = None
 
@@ -74,3 +75,15 @@ def crear_admin_inicial(nombre: str, apellido: str, contrasena: str, email: str,
             s.commit()
             s.refresh(user)
     return user
+
+def select_by_id_service(user_id: int) -> dict:
+    user: Users | None = get_user_by_id(user_id)
+    if user:
+        return {
+            "id_usuario": user.id_users,
+            "nombre": user.nombre,
+            "apellido": user.apellido,
+            "email": user.email,
+            "telefono": user.telefono
+        }
+    return {}

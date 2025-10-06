@@ -7,10 +7,16 @@ from proyectofinal.service.carrito_service import agregar_item_al_carrito
 
 class CatalogoState(rx.State):
     productos: list[dict] = []
+    producto_seleccionado: dict = {}  # ✅ necesario para mostrar detalle
     buscar_texto: str = ""
     error_message: str = ""
     success_message: str = ""
     user_id: int = 0
+
+    @rx.event
+    def seleccionar_producto(self, producto: dict):
+        self.producto_seleccionado = producto
+        return rx.redirect(f"/detalle_producto/{producto['id_producto']}")
 
     @rx.event
     def cargar_productos(self):

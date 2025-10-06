@@ -2,7 +2,6 @@ import reflex as rx
 from proyectofinal.state.catalogo_state import CatalogoState
 from proyectofinal.state.users_state import UsersState
 
-
 # -------------------
 # COMPONENTES
 # -------------------
@@ -59,9 +58,10 @@ def producto_card(p: dict) -> rx.Component:
                     on_click=CatalogoState.agregar_carrito_con_id(p["id_producto"]),
                     width="100%"
                 ),
-                rx.link(
-                    rx.button("Ver Detalle", width="100%"),
-                    href=f"/detalle_producto/{p['id_producto']}"
+                rx.button(
+                    "Ver Detalle",
+                    on_click=CatalogoState.seleccionar_producto(p),
+                    width="100%"
                 ),
                 spacing="2",
                 width="100%"
@@ -79,13 +79,17 @@ def producto_card(p: dict) -> rx.Component:
     )
 
 def mostrar_productos() -> rx.Component:
-    return rx.hstack(
-        rx.foreach(
-            CatalogoState.productos.to(list[dict]),
-            producto_card
-        ),
-        flex_wrap="wrap",
-        justify_content="center"
+    return rx.cond(
+        CatalogoState.productos.length() == 0,
+        rx.spinner(color="blue", thickness="4px", size="3"),
+        rx.hstack(
+            rx.foreach(
+                CatalogoState.productos.to(list[dict]),
+                producto_card
+            ),
+            flex_wrap="wrap",
+            justify_content="center"
+        )
     )
 
 # -------------------

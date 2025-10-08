@@ -3,15 +3,15 @@ from proyectofinal.service.catalogo_service import (
     obtener_catalogo,
     buscar_en_catalogo
 )
-from proyectofinal.service.carrito_service import agregar_item_al_carrito
+from proyectofinal.service.carrito_service import agregar_producto_service
+from proyectofinal.state.shared_user import get_user_id
 
 class CatalogoState(rx.State):
     productos: list[dict] = []
-    producto_seleccionado: dict = {}  # ✅ necesario para mostrar detalle
+    producto_seleccionado: dict = {}
     buscar_texto: str = ""
     error_message: str = ""
     success_message: str = ""
-    user_id: int = 0
 
     @rx.event
     def seleccionar_producto(self, producto: dict):
@@ -40,11 +40,13 @@ class CatalogoState(rx.State):
 
     @rx.event
     def agregar_carrito_con_id(self, producto_id: int):
-        if not self.user_id:
+        user_id = get_user_id(self)
+        if not user_id:
             self.error_message = "Debes iniciar sesión para agregar al carrito."
             self.success_message = ""
             return
-        agregar_item_al_carrito(self.user_id, producto_id)
+        print(f"🛒 Agregando producto {producto_id} al carrito del usuario {user_id}")
+        agregar_producto_service(user_id, producto_id)
         self.success_message = "Producto agregado al carrito ✅"
         self.error_message = ""
 

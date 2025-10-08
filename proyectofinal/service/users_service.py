@@ -80,7 +80,7 @@ def select_by_id_service(user_id: int) -> dict:
     user: Users | None = get_user_by_id(user_id)
     if user:
         return {
-            "id_usuario": user.id_users,
+            "id_users": user.id_users,  # ← corregido
             "nombre": user.nombre,
             "apellido": user.apellido,
             "email": user.email,

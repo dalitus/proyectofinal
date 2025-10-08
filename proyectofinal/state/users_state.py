@@ -49,6 +49,11 @@ class UsersState(rx.State):
         user = validar_usuario_service(email=email, password=password)
         if user:
             self.login(user.id_users)
+
+            # ✅ Importar primero, luego cargar el carrito
+            from proyectofinal.state.carrito_state import CarritoState
+            CarritoState.cargar_carrito()
+
             return rx.redirect("/catalogo")
 
         self.error_message = "Credenciales inválidas. Intenta nuevamente."

@@ -1,96 +1,62 @@
 import reflex as rx
-from proyectofinal.service.carrito_service import (
-    cargar_carrito_service,
-    eliminar_producto_service,
-    finalizar_compra_service
-)
+from proyectofinal.state.carrito_state import  CarritoState
+from proyectofinal.state.app_state import AppState
 
-class CarritoState(rx.State):
-    productos_carrito: list[dict] = []
-    user_id: int = 0
-
-    @rx.event
-    def set_user(self, value: str):
-        self.user_id = int(value) if value.isdigit() else 0
-        self.cargar_carrito()
-
-    @rx.event
-    def cargar_carrito(self):
-        self.productos_carrito = cargar_carrito_service(self.user_id)
-
-    @rx.event
-    def eliminar_producto(self, producto_id: int):
-        eliminar_producto_service(self.user_id, producto_id)
-        self.productos_carrito = cargar_carrito_service(self.user_id)
-
-    @rx.event
-    def finalizar_compra(self):
-        finalizar_compra_service(self.user_id)
-        self.productos_carrito = []
-
-    @rx.var
-    def total(self) -> float:
-        return sum(p.get("precio", 0) for p in self.productos_carrito)
-
-def producto_card(p: dict) -> rx.Component:
-    return rx.card(
-        rx.vstack(
-            rx.image(
-                src=p.get("imagen", "/static/default.jpg"),
-                alt=p.get("nombre", ""),
-                width="150px",
-                height="150px",
-                border_radius="8px",
-                object_fit="cover"
-            ),
-            rx.text(p.get("nombre", ""), font_size="lg", font_weight="bold"),
-            rx.text(f"Precio: ${p.get('precio', '')}", font_size="md"),
-            rx.button(
-                "Eliminar",
-                on_click=lambda: CarritoState.eliminar_producto(p["id_producto"]),
-                color_scheme="red"
-            )
-        ),
-        padding="10px",
-        width="220px",
-        margin="10px"
-    )
-
-@rx.page(route="/carrito", title="Carrito")
+@rx.page(route="/carrito", on_load=CarritoState.cargar_carrito_agrupado)
 def carrito_page() -> rx.Component:
-    return rx.flex(
-        rx.vstack(
-            rx.script("""
-                window.addEventListener('load', () => {
-                    const id = localStorage.getItem('user_id');
-                    if (id) {
-                        fetch('/_api/set_user', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ value: id })
-                        });
-                    }
-                });
-            """),
-            rx.heading("Tu Carrito", size="6"),
-            rx.cond(
-                CarritoState.productos_carrito.length() == 0,
-                rx.text("No hay productos en tu carrito."),
-                rx.flex(
-                    rx.foreach(CarritoState.productos_carrito, producto_card),
-                    wrap="wrap",
-                    justify="center"
-                )
+    return rx.vstack(
+        rx.heading("🛒 Tu carrito", size="6"),
+        rx.text(
+            CarritoState.mensaje_compra,
+            color=rx.cond(
+                CarritoState.mensaje_compra.contains("✅"),
+                "green",
+                "red"
             ),
-            rx.text(f"Total: ${CarritoState.total}", font_size="xl", margin_top="20px"),
-            rx.button(
-                "Finalizar Compra",
-                on_click=CarritoState.finalizar_compra,
-                color_scheme="green",
-                margin_top="10px"
+            font_weight="bold"
+        ),
+        rx.divider(),
+
+        rx.cond(
+            CarritoState.productos_carrito,
+            rx.vstack(
+                rx.hstack(
+                    rx.text("🧾 Producto", font_weight="bold", width="25%"),
+                    rx.text("Cantidad", font_weight="bold", width="10%"),
+                    rx.text("Precio", font_weight="bold", width="15%"),
+                    rx.text("Subtotal", font_weight="bold", width="15%"),
+                    rx.text("Acción", font_weight="bold", width="15%"),
+                    spacing="4"
+                ),
+                rx.foreach(
+                    CarritoState.productos_carrito,
+                    lambda p: rx.hstack(
+                        rx.text(p["nombre"], width="25%"),
+                        rx.text(str(p["cantidad"]), width="10%"),
+                        rx.text(f"${p['precio']:.2f}", width="15%"),
+                        rx.text(f"${p['subtotal']:.2f}", width="15%"),
+                        rx.button(
+                            "Eliminar",
+                            color_scheme="red",
+                            size="3",
+                            on_click=lambda: CarritoState.eliminar_producto(p["id_producto"]),
+                            width="15%"
+                        ),
+                        spacing="4"
+                    )
+                ),
+                spacing="2"
             ),
-            spacing="4",
-            align_items="center",
-            padding="20px"
-        )
+            rx.text("🧺 El carrito está vacío.")
+        ),
+
+        rx.divider(),
+        rx.text(f"💰 Total: ${CarritoState.total:.2f}", font_size="lg", font_weight="bold"),
+        rx.hstack(
+            rx.button("Finalizar compra", on_click=CarritoState.finalizar_compra, color_scheme="green"),
+            rx.button("Vaciar carrito", on_click=CarritoState.vaciar_carrito_completo, color_scheme="gray"),
+        ),
+        rx.button("← Volver al catálogo", on_click=rx.redirect("/catalogo")),
+        padding="6",
+        spacing="4"
     )

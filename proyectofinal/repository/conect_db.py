@@ -23,3 +23,10 @@ def get_session():
     return Session(engine)
 
 session = Session(engine)
+
+def get_db():
+    db = Session(engine)
+    try:
+        yield db
+    finally:
+        db.close()
